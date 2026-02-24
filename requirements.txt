@@ -1,0 +1,6 @@
+python-telegram-bot==21.9
+faster-whisper>=1.2.1
+kokoro-onnx>=0.4.0
+av>=16.1.0
+huggingface-hub>=0.27.0
+numpy>=2.0.0
