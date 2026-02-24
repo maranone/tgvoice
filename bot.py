@@ -105,24 +105,33 @@ def _prompt(question: str, default: str = "") -> str:
     return answer if answer else default
 
 
-def _download_kokoro_models(models_dir: Path) -> None:
-    """Download kokoro-onnx model files from Hugging Face Hub."""
-    from huggingface_hub import hf_hub_download
+def _download_file(url: str, dest: Path) -> None:
+    """Download a file with a simple progress indicator."""
+    import urllib.request
+    print(f"  Downloading {dest.name}...")
+    def _progress(count, block_size, total_size):
+        if total_size > 0:
+            pct = min(int(count * block_size * 100 / total_size), 100)
+            print(f"\r  {pct}%", end="", flush=True)
+    urllib.request.urlretrieve(url, dest, reporthook=_progress)
+    print(f"\r  Done.     ")
 
+
+def _download_kokoro_models(models_dir: Path) -> None:
+    """Download kokoro-onnx model files from GitHub releases."""
     models_dir.mkdir(parents=True, exist_ok=True)
-    repo = "thewh1teagle/kokoro-onnx-v1.0"
+    base = "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0"
 
     for filename, label in [
         ("kokoro-v1.0.onnx", "Kokoro ONNX model (~310MB)"),
-        ("voices-v1.0.bin", "Kokoro voices file"),
+        ("voices-v1.0.bin", "Kokoro voices file (~30MB)"),
     ]:
         dest = models_dir / filename
         if dest.exists():
-            print(f"  {filename} already cached, skipping.")
+            print(f"  {filename} already exists, skipping.")
         else:
-            print(f"  Downloading {label}...")
-            hf_hub_download(repo_id=repo, filename=filename, local_dir=str(models_dir))
-            print(f"  Done.")
+            print(f"  {label}")
+            _download_file(f"{base}/{filename}", dest)
 
 
 def run_config_wizard() -> dict:
@@ -405,6 +414,8 @@ def _run_claude(prompt: str) -> str:
         [cli, "--print", prompt, "--output-format", "text"],
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         timeout=timeout,
         env=env,
         cwd=str(Path.home()),
@@ -433,6 +444,8 @@ def _run_codex(prompt: str) -> str:
             ],
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=timeout,
         )
         if result.returncode != 0:
@@ -483,7 +496,8 @@ async def process_and_reply(update: Update, user_text: str) -> None:
     conversation_append("Assistant", reply_text)
 
     display = f"*Dijiste:* {user_text}\n\n*Respuesta:* {reply_text}"
-    await update.message.reply_text(display, parse_mode="Markdown")
+    for i in range(0, len(display), 4096):
+        await update.message.reply_text(display[i:i+4096], parse_mode="Markdown")
 
     try:
         ogg_bytes = await text_to_ogg_bytes(reply_text)
@@ -616,4 +630,6 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     main()
