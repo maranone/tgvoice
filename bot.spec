@@ -13,11 +13,21 @@
 # as the executable.
 
 import sys
+import os
+import site
 from PyInstaller.utils.hooks import (
     collect_data_files,
     collect_dynamic_libs,
     collect_submodules,
 )
+
+def _find_package_dir(pkg_name):
+    """Find the directory of an installed package."""
+    for sp in site.getsitepackages():
+        candidate = os.path.join(sp, pkg_name)
+        if os.path.isdir(candidate):
+            return candidate
+    return None
 
 # ---- Collect all library components ----
 
@@ -43,8 +53,18 @@ hidden_imports += collect_submodules("onnxruntime")
 binaries_list  += collect_dynamic_libs("onnxruntime")
 datas_list     += collect_data_files("onnxruntime")
 
-# kokoro-onnx
+# kokoro-onnx (explicitly include config.json by direct path)
 hidden_imports += collect_submodules("kokoro_onnx")
+datas_list     += collect_data_files("kokoro_onnx")
+_kokoro_dir = _find_package_dir("kokoro_onnx")
+if _kokoro_dir:
+    datas_list.append((os.path.join(_kokoro_dir, "config.json"), "kokoro_onnx"))
+
+# language_tags, csvw, segments — data-heavy packages missed by collect_data_files
+for _pkg in ("language_tags", "csvw", "segments"):
+    _pkg_dir = _find_package_dir(_pkg)
+    if _pkg_dir:
+        datas_list.append((_pkg_dir, _pkg))
 
 # espeakng-loader: bundled libespeak-ng.so + phoneme data (dependency of kokoro-onnx)
 hidden_imports += collect_submodules("espeakng_loader")
@@ -114,36 +134,20 @@ pyz = PYZ(a.pure, a.zipped_data, cipher=None)
 exe = EXE(
     pyz,
     a.scripts,
-    [],
-    exclude_binaries=True,  # use COLLECT (one-dir mode for fast startup)
+    a.binaries,   # one-file: bundle everything into the exe
+    a.zipfiles,
+    a.datas,
+    exclude_binaries=False,
     name="telegram-voice-bot",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=True,
-    console=True,  # needs a terminal for the first-run config wizard
+    upx=False,    # don't UPX — breaks DLLs inside the single-file bundle
+    console=True,
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
     icon=None,
-)
-
-coll = COLLECT(
-    exe,
-    a.binaries,
-    a.zipfiles,
-    a.datas,
-    strip=False,
-    upx=True,
-    upx_exclude=[
-        # Don't UPX-compress shared libraries — breaks RPATH / load paths
-        "libav*.so*",
-        "libctranslate2*.so*",
-        "libonnxruntime*.so*",
-        "libespeak*.so*",
-        "*.dll",
-    ],
-    name="telegram-voice-bot",
 )
