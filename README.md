@@ -5,9 +5,9 @@ Telegram bot that acts as a voice/text interface to Claude or Codex. You send it
 1. Create the bot
   - Open Telegram, search for @BotFather
   - Send /newbot
-  - Choose a name (display name): e.g. Claudio
-  - Choose a username (must end in bot): e.g. claudio_waz_bot
-  - BotFather gives you a token like 7384729301:AABcDefGhIjKlMnOpQrStUvWxYz
+  - Choose a name (display name): e.g. tgvoice
+  - Choose a username (must end in bot): e.g. tgvoice_bot
+  - BotFather gives you a token like 7484729301:ABBcDefGhIjKlMnOpQrStUvWxYz
   - Copy it — this goes into the wizard when you first run the bot
 
   2. Get your chat ID (for the owner restriction)
@@ -17,12 +17,10 @@ Telegram bot that acts as a voice/text interface to Claude or Codex. You send it
   - This is the owner ID — only your account can talk to the bot
 
   3. Run the bot for the first time
-  source /home/waz/venvs/telegram-bot/bin/activate
-  cd /home/waz/telegram-voice-bot/standalone/
   python bot.py
   The wizard asks for the token and chat ID, downloads models, then starts.
 
   4. Find your bot on Telegram
-  - Search for the username you picked (e.g. @claudio_waz_bot)
+  - Search for the username you picked (e.g. @tgvoice_bot)
   - Send /start
   - Done
