@@ -310,7 +310,7 @@ def cleanup(*paths: str) -> None:
         try:
             Path(p).unlink(missing_ok=True)
         except Exception:
-            pass
+            logging.exception("Failed to delete %s", p)
 
 
 # ============================================================
